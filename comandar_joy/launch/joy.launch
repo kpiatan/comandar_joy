@@ -1,0 +1,18 @@
+<launch>
+
+  <node pkg="joy" type="joy_node" name="joy_node" output="screen">
+    <param name="autorepeat_rate" value="5.0"/>
+  </node>
+
+  <node pkg="comandar_joy" type="comandar_joy_node" name="comandar_joy_node" output="screen">
+    <param name="axis_linear" value="1" type="int"/>
+    <param name="axis_angular" value="0" type="int"/>
+    <param name="scale_linear" value="0.1" type="double"/>
+    <param name="scale_angular" value="0.2" type="double"/>
+    <!-- <param name="linear_accel" value="0.2" type="double"/> -->
+    <!-- <param name="linear_max" value="2.0" type="double"/> -->
+    <param name="topic_name" value="/air2/cmd_vel" type="string"/>
+
+  </node>
+
+</launch>

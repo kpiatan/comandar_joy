@@ -1,0 +1,6 @@
+<launch>
+  
+  <remap from="cmd_vel" to="joy/cmd_vel"/>
+  <include file="$(find comandar_joy)/launch/joy.launch" />
+
+</launch>
