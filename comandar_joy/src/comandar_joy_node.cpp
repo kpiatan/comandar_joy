@@ -1,9 +1,10 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/Joy.h>
+#include <std_msgs/Int16.h>
 
-bool flag = 0;
-ros::Time currtime, lasttime;
+
+int status_atual;
 
 class TeleopJoy
 {
@@ -16,9 +17,11 @@ private:
   ros::NodeHandle nh_;
 
   int linear_, angular_;
-  double l_scale_, a_scale_, l_accel_, l_max_, v0;
+  double l_scale_, a_scale_, l_accel_, l_max_;
+  bool linear_pressed, angular_pressed;
   std::string topic_name_;
   ros::Publisher vel_pub_;
+  ros::Publisher status_pub_;
   ros::Subscriber joy_sub_;
 
 };
@@ -33,11 +36,11 @@ TeleopJoy::TeleopJoy():
   nh_.param("/comandar_joy_node/axis_angular", angular_, 0);
   nh_.param("/comandar_joy_node/scale_angular", a_scale_, 0.3);
   nh_.param("/comandar_joy_node/scale_linear", l_scale_, 0.15);
-  //nh_.param("/comandar_joy_node/linear_accel", l_accel_, 0.2);
-  //nh_.param("/comandar_joy_node/linear_max", l_max_, 2.0);
   nh_.param<std::string>("/comandar_joy_node/topic_name", topic_name_, "/cmd_vel");
 
   vel_pub_ = nh_.advertise<geometry_msgs::Twist>(topic_name_, 1);
+
+  status_pub_ = nh_.advertise<std_msgs::Int16>("autonomy_level", 1);
 
   joy_sub_ = nh_.subscribe<sensor_msgs::Joy>("joy", 10, &TeleopJoy::joyCallback, this);
 
@@ -45,28 +48,48 @@ TeleopJoy::TeleopJoy():
 
 void TeleopJoy::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
-  if (flag == 0)
-  {
-    v0 = 0;
-    lasttime = ros::Time::now();
-    flag = 1;
-  }
-  currtime = ros::Time::now();
-  ros::Duration diff = currtime - lasttime;
+
   geometry_msgs::Twist twist;
+  
+  if (joy->buttons[5] && !linear_pressed) 
+  {
+    l_scale_ += 0.05;
+    linear_pressed = 1;
+  }
+  if (joy->buttons[4]&& !linear_pressed) 
+  {
+    l_scale_ -= 0.05;
+    linear_pressed = 1;
+  }
+  if ((!joy->buttons[4]) && (!joy->buttons[5])) linear_pressed = 0;
+
+  if (joy->buttons[7] && !angular_pressed) 
+  {
+    a_scale_ += 0.05;
+    angular_pressed = 1;
+  }
+  if (joy->buttons[6]&& !angular_pressed) 
+  {
+    a_scale_ -= 0.05;
+    angular_pressed = 1;
+  }
+  if ((!joy->buttons[6]) && (!joy->buttons[7])) angular_pressed = 0;
+
   twist.angular.z = a_scale_*joy->axes[angular_];
   twist.linear.x = l_scale_*joy->axes[linear_];
-  //twist.linear.x = v0;
   vel_pub_.publish(twist);
-  //ROS_WARN("V0: [%f]", v0);
-  //ROS_WARN("cmd vel: [%f]", v0*l_scale_*joy->axes[linear_]);
-  //ROS_WARN("l_accel_: [%f]", l_accel_);
 
-  //v0 = v0 + l_accel_*joy->axes[linear_]*(double)diff.toSec();
-  //if (v0 > l_max_) v0 = l_max_;
-  //if (v0 < -l_max_) v0 = -l_max_;
-  //if (joy->axes[linear_] == 0) v0 = 0;
-  lasttime = ros::Time::now();
+  std_msgs::Int16 status;
+
+  if (joy->buttons[0]) status_atual = 1;
+  if (joy->buttons[1]) status_atual = 2;
+  if (joy->buttons[2]) status_atual = 3;
+  if (joy->buttons[3]) status_atual = 4;
+
+  status.data = status_atual;
+
+  status_pub_.publish(status);
+
 }
 
 
